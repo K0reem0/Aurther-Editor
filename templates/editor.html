@@ -2,525 +2,205 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Python Image Editor</title>
-    <style>
-        body { font-family: sans-serif; }
-        #editor-area { display: flex; gap: 20px; flex-wrap: wrap;}
-        #canvas-container { position: relative; /* Needed for overlay canvas */ max-width: 800px; border: 1px solid grey; }
-        #image-canvas { display: block; /* Prevent extra space below */ max-width: 100%; height: auto; }
-        /* Overlay canvas for drawing brushes/masks without affecting original until applied */
-        #overlay-canvas { position: absolute; top: 0; left: 0; pointer-events: none; /* Initially ignore mouse */ }
-        #controls { margin-top: 15px; border: 1px solid #eee; padding: 10px; min-width: 250px;}
-        .tool-group { margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; }
-        label { margin-right: 5px; }
-        button, input, select { margin: 2px 5px; padding: 5px; }
-        #loading-indicator { display: none; margin-top: 10px; color: blue; }
-        /* Style for active tool */
-        button.active { background-color: lightblue; border-color: blue; }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Python/OpenCV Image Editor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>Python/OpenCV Image Editor</h1>
+    <div id="editor-wrapper">
+        <h1>Image Editor</h1>
 
-    <input type="file" id="image-upload" accept="image/png, image/jpeg, image/gif">
-    <span id="loading-indicator">Processing...</span>
-
-    <div id="editor-area">
-        <div id="canvas-container">
-            <canvas id="image-canvas"></canvas>
-            <canvas id="overlay-canvas"></canvas>
+        <div id="theme-switcher">
+            Theme:
+            <button id="theme-light-btn">Light</button>
+            <button id="theme-dark-btn">Dark</button>
         </div>
 
-        <div id="controls">
-            <div class="tool-group">
-                <strong>Tools:</strong><br>
-                <button id="select-tool-btn" class="active">Select</button>
-                <button id="brush-tool-btn">Brush</button>
-                <button id="inpaint-tool-btn">Inpaint</button>
-                </div>
-
-             <div id="brush-options" class="tool-group" style="display: none;">
-                <strong>Brush Options:</strong><br>
-                <label for="brush-size">Size:</label>
-                <input type="range" id="brush-size" min="1" max="50" value="10">
-                <span id="brush-size-val">10</span><br>
-                <label for="brush-color">Color:</label>
-                <input type="color" id="brush-color" value="#ff0000"> </div>
-
-             <div id="inpaint-options" class="tool-group" style="display: none;">
-                 <strong>Inpaint Options:</strong><br>
-                <label for="inpaint-brush-size">Mask Brush Size:</label>
-                <input type="range" id="inpaint-brush-size" min="1" max="100" value="20">
-                <span id="inpaint-brush-size-val">20</span><br>
-                <button id="apply-inpaint-btn">Apply Inpaint</button>
-                <button id="clear-mask-btn">Clear Mask</button>
-             </div>
-
-             <div class="tool-group">
-                <strong>Text:</strong><br>
-                <input type="text" id="text-input" placeholder="Enter text...">
-                <select id="font-select">
-                    <option value="Arial">Arial</option>
-                    <option value="Verdana">Verdana</option>
-                    <option value="Times New Roman">Times New Roman</option>
-                </select><br>
-                <label for="font-size">Size:</label><input type="number" id="font-size" value="30" min="8">
-                <label for="font-color">Color:</label><input type="color" id="font-color" value="#000000">
-                <button id="add-text-btn">Add Text at (10, 30)</button> </div>
-
-             <div class="tool-group">
-                <strong>Transform:</strong><br>
-                <button id="rotate-btn">Rotate 90° CW</button>
-                </div>
-
-             <div class="tool-group">
-                 <strong>History:</strong><br>
-                 <button id="undo-btn" disabled>Undo</button>
-                 <button id="apply-server-changes-btn" style="display:none;">Apply Server Changes</button> </div>
+        <div class="input-group" style="margin-bottom: 1rem;">
+             <label for="image-upload">Upload Image:</label>
+             <input type="file" id="image-upload" accept="image/png, image/jpeg, image/gif">
         </div>
-    </div>
+        <div id="loading-indicator">Processing...</div>
 
-    <script>
-        // --- Canvas Setup ---
+        <div id="editor-area">
+            <div id="canvas-container">
+                <canvas id="image-canvas"></canvas>
+                <canvas id="overlay-canvas"></canvas>
+            </div>
+
+            <div id="controls">
+                <div class="tool-group">
+                    <strong>Tools:</strong>
+                    <div class="button-group">
+                        <button id="select-tool-btn" class="active">Select</button>
+                        <button id="brush-tool-btn">Brush</button>
+                        <button id="inpaint-tool-btn">Inpaint</button>
+                        </div>
+                </div>
+
+                 <div id="brush-options" class="tool-group" style="display: none;">
+                    <strong>Brush Options:</strong>
+                    <div class="input-group range-group">
+                         <label for="brush-size">Size:</label>
+                         <input type="range" id="brush-size" min="1" max="50" value="10">
+                         <span id="brush-size-val">10</span>
+                    </div>
+                    <div class="input-group">
+                         <label for="brush-color">Color:</label>
+                         <input type="color" id="brush-color" value="#ff0000">
+                    </div>
+                 </div>
+
+                 <div id="inpaint-options" class="tool-group" style="display: none;">
+                     <strong>Inpaint Options:</strong>
+                     <div class="input-group range-group">
+                         <label for="inpaint-brush-size">Mask Size:</label>
+                         <input type="range" id="inpaint-brush-size" min="1" max="100" value="20">
+                         <span id="inpaint-brush-size-val">20</span>
+                     </div>
+                     <div class="button-group">
+                         <button id="apply-inpaint-btn">Apply Inpaint</button>
+                         <button id="clear-mask-btn">Clear Mask</button>
+                     </div>
+                 </div>
+
+                 <div class="tool-group">
+                    <strong>Text:</strong>
+                     <div class="input-group">
+                         <input type="text" id="text-input" placeholder="Enter text...">
+                     </div>
+                    <div class="input-group">
+                        <label for="font-select">Font:</label>
+                        <select id="font-select">
+                            <option value="Arial">Arial</option>
+                            <option value="Verdana">Verdana</option>
+                            <option value="Times New Roman">Times New Roman</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label for="font-size">Size:</label>
+                        <input type="number" id="font-size" value="30" min="8">
+                    </div>
+                    <div class="input-group">
+                         <label for="font-color">Color:</label>
+                         <input type="color" id="font-color" value="#000000">
+                    </div>
+                     <button id="add-text-btn">Add Text at (10, 30)</button> </div>
+
+                 <div class="tool-group">
+                    <strong>Transform:</strong>
+                    <div class="button-group">
+                        <button id="rotate-btn">Rotate 90° CW</button>
+                        </div>
+                 </div>
+
+                 <div class="tool-group">
+                     <strong>History & Apply:</strong>
+                     <div class="button-group">
+                         <button id="undo-btn" disabled>Undo</button>
+                         </div>
+                 </div>
+            </div> </div> </div> <script>
+        // --- Existing JS code from previous step goes here ---
+        // Add the following code INSIDE the existing <script> tag
+        // or at the end of your separate JS file.
+
+        // --- Theme Switching Logic ---
+        const lightThemeBtn = document.getElementById('theme-light-btn');
+        const darkThemeBtn = document.getElementById('theme-dark-btn');
+        const bodyElement = document.body;
+
+        function applyTheme(themeName) {
+            if (themeName === 'dark') {
+                bodyElement.classList.add('dark-theme');
+                lightThemeBtn.classList.remove('active');
+                darkThemeBtn.classList.add('active');
+            } else {
+                bodyElement.classList.remove('dark-theme');
+                darkThemeBtn.classList.remove('active');
+                lightThemeBtn.classList.add('active');
+            }
+            // Store preference in localStorage
+            try {
+                localStorage.setItem('editorTheme', themeName);
+            } catch (e) {
+                console.warn("LocalStorage not available. Theme preference won't be saved.");
+            }
+        }
+
+        lightThemeBtn.addEventListener('click', () => applyTheme('light'));
+        darkThemeBtn.addEventListener('click', () => applyTheme('dark'));
+
+        // Load saved theme on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            let savedTheme = 'light'; // Default to light
+            try {
+                 savedTheme = localStorage.getItem('editorTheme') || 'light';
+            } catch (e) {
+                console.warn("LocalStorage not available.");
+            }
+            applyTheme(savedTheme); // Apply the saved or default theme
+        });
+
+
+        // --- Minor JS updates (Optional but good practice) ---
+
+        // Make range slider values update dynamically
+        brushSizeInput.addEventListener('input', (e) => {
+            brushSizeVal.textContent = e.target.value;
+        });
+        inpaintBrushSizeInput.addEventListener('input', (e) => {
+            inpaintBrushSizeVal.textContent = e.target.value;
+        });
+
+
+        // --- Ensure ALL your previous JavaScript code is included below ---
+        // (Canvas setup, state variables, drawing functions, event listeners, etc.)
+
         const canvas = document.getElementById('image-canvas');
         const ctx = canvas.getContext('2d');
         const overlayCanvas = document.getElementById('overlay-canvas');
         const overlayCtx = overlayCanvas.getContext('2d');
-
-        // --- Controls ---
-        const uploadInput = document.getElementById('image-upload');
-        const loadingIndicator = document.getElementById('loading-indicator');
-        const applyServerChangesBtn = document.getElementById('apply-server-changes-btn');
-        const undoBtn = document.getElementById('undo-btn');
-        // Tool buttons
-        const selectToolBtn = document.getElementById('select-tool-btn');
-        const brushToolBtn = document.getElementById('brush-tool-btn');
-        const inpaintToolBtn = document.getElementById('inpaint-tool-btn');
-        // Brush options
-        const brushOptionsDiv = document.getElementById('brush-options');
-        const brushSizeInput = document.getElementById('brush-size');
-        const brushSizeVal = document.getElementById('brush-size-val');
+        // ... (rest of your existing JS variables for controls) ...
+        const brushSizeInput = document.getElementById('brush-size'); // Already defined above, ensure no conflict
+        const brushSizeVal = document.getElementById('brush-size-val'); // Already defined above
         const brushColorInput = document.getElementById('brush-color');
-        // Inpaint options
-        const inpaintOptionsDiv = document.getElementById('inpaint-options');
-        const inpaintBrushSizeInput = document.getElementById('inpaint-brush-size');
-        const inpaintBrushSizeVal = document.getElementById('inpaint-brush-size-val');
-        const applyInpaintBtn = document.getElementById('apply-inpaint-btn');
-        const clearMaskBtn = document.getElementById('clear-mask-btn');
-        // Text options
-        const textInput = document.getElementById('text-input');
-        const fontSelect = document.getElementById('font-select');
-        const fontSizeInput = document.getElementById('font-size');
-        const fontColorInput = document.getElementById('font-color');
-        const addTextBtn = document.getElementById('add-text-btn');
-        // Transform
-        const rotateBtn = document.getElementById('rotate-btn');
+        // ... etc ...
 
+        // Ensure functions like resizeCanvasAndOverlay, clearOverlay, drawLine, mergeOverlay,
+        // saveState, restoreState, updateUndoButton, setActiveTool, sendActionsToServer
+        // and ALL event listeners (upload, mouse events, button clicks) are present here.
 
-        // --- State Variables ---
-        let currentImage = null; // The main image object
-        let originalFilename = null; // Filename on the server
-        let history = []; // For undo (stores canvas data URLs)
-        let currentStateIndex = -1;
-        let isDrawing = false;
-        let lastX = 0;
-        let lastY = 0;
-        let currentTool = 'select'; // 'select', 'brush', 'inpaint'
-        let activeToolButton = selectToolBtn; // Keep track of the active button
+        // Example: Re-declare just the setActiveTool function to show placement
+         let currentTool = 'select'; // 'select', 'brush', 'inpaint'
+         let activeToolButton = selectToolBtn; // Keep track of the active button
 
-        // --- Canvas / Drawing Functions ---
+         function setActiveTool(toolName, buttonElement) {
+             // Deactivate previous button
+             if (activeToolButton) activeToolButton.classList.remove('active');
 
-        function resizeCanvasAndOverlay() {
-            if (!currentImage) return;
-            canvas.width = currentImage.width;
-            canvas.height = currentImage.height;
-            overlayCanvas.width = canvas.width;
-            overlayCanvas.height = canvas.height;
-            // Redraw main image
-            ctx.drawImage(currentImage, 0, 0);
-            // Clear overlay after resize
-            clearOverlay();
-        }
+             // Activate new button
+             currentTool = toolName;
+             buttonElement.classList.add('active');
+             activeToolButton = buttonElement;
 
-        function clearOverlay() {
-            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-        }
+             // Show/hide options panels
+             brushOptionsDiv.style.display = toolName === 'brush' ? 'block' : 'none';
+             inpaintOptionsDiv.style.display = toolName === 'inpaint' ? 'block' : 'none';
 
-        function drawLine(context, x1, y1, x2, y2, color, lineWidth) {
-            context.beginPath();
-            context.strokeStyle = color;
-            context.lineWidth = lineWidth;
-            context.lineCap = 'round'; // Smoother lines
-            context.lineJoin = 'round';
-            context.moveTo(x1, y1);
-            context.lineTo(x2, y2);
-            context.stroke();
-            context.closePath();
-        }
+             // Enable/disable pointer events on overlay
+             overlayCanvas.style.pointerEvents = (toolName === 'brush' || toolName === 'inpaint') ? 'auto' : 'none';
 
-        // Merge the overlay canvas onto the main canvas
-        function mergeOverlay() {
-             if (overlayCanvas.width > 0 && overlayCanvas.height > 0) {
-                 ctx.drawImage(overlayCanvas, 0, 0);
-                 clearOverlay(); // Clear overlay after merging
-             }
-        }
-
-        // --- History Management ---
-
-        function saveState() {
-            // Merge overlay before saving state if needed (e.g., after brush stroke)
-             mergeOverlay();
-
-            const state = canvas.toDataURL(); // Save main canvas state
-            history = history.slice(0, currentStateIndex + 1); // Discard redo history
-            history.push(state);
-            currentStateIndex++;
-            updateUndoButton();
-        }
-
-        function restoreState(index) {
-            if (index < 0 || index >= history.length) return;
-
-            const stateDataUrl = history[index];
-            const img = new Image();
-            img.onload = () => {
-                currentImage = img; // Update currentImage to the restored state
-                resizeCanvasAndOverlay(); // Redraws main image from currentImage
-                currentStateIndex = index;
-                updateUndoButton();
-            };
-            img.src = stateDataUrl;
-        }
-
-        function updateUndoButton() {
-            undoBtn.disabled = currentStateIndex <= 0;
-        }
-
-        // --- Tool Selection ---
-
-        function setActiveTool(toolName, buttonElement) {
-            currentTool = toolName;
-
-            // Update button styles
-            if (activeToolButton) activeToolButton.classList.remove('active');
-            buttonElement.classList.add('active');
-            activeToolButton = buttonElement;
-
-            // Show/hide options
-            brushOptionsDiv.style.display = toolName === 'brush' ? 'block' : 'none';
-            inpaintOptionsDiv.style.display = toolName === 'inpaint' ? 'block' : 'none';
-
-            // Enable/disable pointer events on overlay
-            overlayCanvas.style.pointerEvents = (toolName === 'brush' || toolName === 'inpaint') ? 'auto' : 'none';
-
-            // Clear temporary drawings if switching tools
-            clearOverlay(); // Clear mask/brush previews when switching
-        }
-
-        // --- Event Listeners ---
-
-        // Tool selection listeners
-        selectToolBtn.addEventListener('click', () => setActiveTool('select', selectToolBtn));
-        brushToolBtn.addEventListener('click', () => setActiveTool('brush', brushToolBtn));
-        inpaintToolBtn.addEventListener('click', () => setActiveTool('inpaint', inpaintToolBtn));
-
-        // Brush size display update
-        brushSizeInput.addEventListener('input', (e) => brushSizeVal.textContent = e.target.value);
-        inpaintBrushSizeInput.addEventListener('input', (e) => inpaintBrushSizeVal.textContent = e.target.value);
-
-
-        // Canvas Mouse Events (Handle Drawing/Masking)
-        overlayCanvas.addEventListener('mousedown', (e) => {
-            if (currentTool !== 'brush' && currentTool !== 'inpaint') return;
-            isDrawing = true;
-            // Get coordinates relative to the canvas
-            const rect = overlayCanvas.getBoundingClientRect();
-            [lastX, lastY] = [e.clientX - rect.left, e.clientY - rect.top];
-        });
-
-        overlayCanvas.addEventListener('mousemove', (e) => {
-            if (!isDrawing || (currentTool !== 'brush' && currentTool !== 'inpaint')) return;
-
-            const rect = overlayCanvas.getBoundingClientRect();
-            const currentX = e.clientX - rect.left;
-            const currentY = e.clientY - rect.top;
-
-            let drawColor = '#000000';
-            let drawSize = 10;
-
-            if (currentTool === 'brush') {
-                drawColor = brushColorInput.value;
-                drawSize = parseInt(brushSizeInput.value, 10);
-                 // Draw on overlay in real-time
-                 drawLine(overlayCtx, lastX, lastY, currentX, currentY, drawColor, drawSize);
-            } else if (currentTool === 'inpaint') {
-                // Draw mask on overlay (use white for mask area, black background handled by server)
-                drawColor = 'rgba(255, 255, 255, 0.7)'; // Semi-transparent white for preview
-                drawSize = parseInt(inpaintBrushSizeInput.value, 10);
-                 // Draw semi-transparent circles for mask preview
-                 overlayCtx.fillStyle = drawColor;
-                 overlayCtx.beginPath();
-                 overlayCtx.arc(currentX, currentY, drawSize / 2, 0, Math.PI * 2);
-                 overlayCtx.fill();
-                 // Optional: drawLine(overlayCtx, lastX, lastY, currentX, currentY, drawColor, drawSize);
-            }
-
-
-            [lastX, lastY] = [currentX, currentY];
-        });
-
-        overlayCanvas.addEventListener('mouseup', () => {
-            if (!isDrawing) return;
-            isDrawing = false;
-             // If brushing, we *could* merge immediately, or wait for apply changes
-             // If inpainting, the overlay IS the mask preview. Don't merge yet.
-             // For simplicity with undo, let's merge brush strokes now and save state.
-             if (currentTool === 'brush') {
-                saveState(); // Merges overlay and saves state
-             }
-        });
-
-        overlayCanvas.addEventListener('mouseout', () => {
-           // Stop drawing if mouse leaves canvas while pressed down
-           if (isDrawing) {
-                isDrawing = false;
-                if (currentTool === 'brush') {
-                   saveState(); // Save state when brush stroke finishes off-canvas
-                }
-           }
-        });
-
-        // --- Upload ---
-        uploadInput.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            loadingIndicator.style.display = 'inline';
-            applyServerChangesBtn.style.display = 'none';
-            const formData = new FormData();
-            formData.append('file', file);
-
-            // Reset state
-            history = [];
-            currentStateIndex = -1;
-            currentImage = null;
-            originalFilename = null;
-            ctx.clearRect(0,0,canvas.width, canvas.height);
-            clearOverlay();
-
-
-            fetch('/upload', { method: 'POST', body: formData })
-            .then(response => response.json())
-            .then(data => {
-                loadingIndicator.style.display = 'none';
-                if (data.error) {
-                    alert(`Upload Error: ${data.error}`);
-                    return;
-                }
-                originalFilename = data.filename;
-                currentImage = new Image();
-                currentImage.onload = () => {
-                    resizeCanvasAndOverlay(); // Set canvas size, draw image
-                    saveState(); // Save the initial state
-                    applyServerChangesBtn.style.display = 'inline-block'; // Show apply button
-                    setActiveTool('select', selectToolBtn); // Reset to select tool
-                };
-                 currentImage.onerror = () => {
-                     alert('Failed to load uploaded image preview.');
-                 };
-                currentImage.src = data.imageUrl + `?t=${new Date().getTime()}`; // Add timestamp to prevent caching
-            })
-            .catch(error => {
-                loadingIndicator.style.display = 'none';
-                console.error('Upload fetch error:', error);
-                alert('Failed to upload image.');
-            });
-        });
-
-        // --- Backend Processing Call ---
-        function sendActionsToServer(actions) {
-             if (!originalFilename && !currentImage) {
-                 alert("No image loaded to process.");
-                 return;
-             }
-             if (!actions || actions.length === 0) {
-                 alert("No actions to apply.");
-                 return;
-             }
-
-             loadingIndicator.style.display = 'inline';
-
-             // Send the *current* canvas state if actions might depend on it (like inpaint)
-             // or if client-side edits (like brush) happened.
-             const currentCanvasData = canvas.toDataURL('image/png'); // Send current state as PNG
-
-             // If the first action depends on the original file, use originalFilename
-             const baseFilename = (actions[0].operation === 'inpaint' || actions[0].operation === 'some_other_original_dependent') ? originalFilename : null;
-
-             fetch('/process', {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({
-                    // filename: baseFilename, // Send original if needed by first op
-                     currentImageData: currentCanvasData, // Send current canvas state
-                     actions: actions
-                 })
-             })
-             .then(response => {
-                 if (!response.ok) {
-                      // Try to get error message from JSON response
-                      return response.json().then(errData => {
-                          throw new Error(errData.error || `HTTP error! Status: ${response.status}`);
-                      }).catch(() => {
-                           // Fallback if response is not JSON or error field missing
-                           throw new Error(`HTTP error! Status: ${response.status}`);
-                      });
-                 }
-                 return response.json();
-             })
-             .then(data => {
-                 loadingIndicator.style.display = 'none';
-                 if (data.error) {
-                     alert(`Processing Error: ${data.error}`);
-                     return;
-                 }
-
-                 // Update the canvas with the processed image from the server
-                 const img = new Image();
-                 img.onload = () => {
-                     currentImage = img; // Update main image object
-                     resizeCanvasAndOverlay(); // Redraws main canvas
-                     saveState(); // Save the new state received from server
-                     alert('Server changes applied successfully!');
-                 };
-                 img.onerror = () => {
-                    alert('Failed to load processed image from server.');
-                 }
-                 img.src = data.imageData; // Load base64 data URL
-             })
-             .catch(error => {
-                 loadingIndicator.style.display = 'none';
-                 console.error('Processing fetch error:', error);
-                 alert(`Processing failed: ${error.message}`);
-             });
-        }
-
-        // --- Action Buttons ---
-
-        // Inpaint specific apply button
-        applyInpaintBtn.addEventListener('click', () => {
-            if (currentTool !== 'inpaint' || !currentImage) return;
-
-            // Get the mask data from the overlay canvas
-            // Important: Create a temporary canvas to draw the mask in pure white on black
-            const maskCanvas = document.createElement('canvas');
-            maskCanvas.width = overlayCanvas.width;
-            maskCanvas.height = overlayCanvas.height;
-            const maskCtx = maskCanvas.getContext('2d');
-
-             // Fill background black (important for OpenCV mask interpretation)
-            maskCtx.fillStyle = 'black';
-            maskCtx.fillRect(0, 0, maskCanvas.width, maskCanvas.height);
-
-             // Draw the overlay content (drawn with white/transparent white) onto the mask canvas in pure white
-            maskCtx.fillStyle = 'white'; // Ensure mask pixels are pure white
-            // Draw the overlay canvas content onto the mask canvas
-            // Note: This assumes the overlay was drawn with fillStyle. If using stroke, adjust logic.
-            // A simple way is to redraw the overlay content with white fill here,
-            // or directly use the overlay pixels if they were drawn white.
-             // For simplicity, let's assume overlayCtx contains the mask shape:
-            maskCtx.drawImage(overlayCanvas, 0, 0); // This might need adjustment if overlay isn't pure white
-
-            // Refine mask: make sure transparent areas are black and painted areas are white
-            const imageData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
-            const data = imageData.data;
-            for (let i = 0; i < data.length; i += 4) {
-                // If pixel has some transparency or color (i.e., was painted on overlay), make it pure white
-                // Otherwise make it pure black. Check alpha channel (data[i+3]).
-                 if (data[i+3] > 50) { // If pixel is not fully transparent (adjust threshold)
-                    data[i] = 255;     // R = 255
-                    data[i + 1] = 255; // G = 255
-                    data[i + 2] = 255; // B = 255
-                    data[i + 3] = 255; // Alpha = 255 (Opaque White)
-                } else {
-                    data[i] = 0;       // R = 0
-                    data[i + 1] = 0;   // G = 0
-                    data[i + 2] = 0;   // B = 0
-                    data[i + 3] = 255; // Alpha = 255 (Opaque Black)
-                }
-            }
-            maskCtx.putImageData(imageData, 0, 0);
-
-
-            const maskDataUrl = maskCanvas.toDataURL('image/png'); // Send mask as PNG
-            clearOverlay(); // Clear the preview mask from the overlay
-
-            const actions = [{
-                operation: 'inpaint',
-                maskData: maskDataUrl,
-                radius: 5 // Example radius, make this configurable if needed
-            }];
-            sendActionsToServer(actions);
-        });
-
-         clearMaskBtn.addEventListener('click', () => {
-             if(currentTool === 'inpaint') {
-                 clearOverlay(); // Just clear the preview mask
-             }
-         });
-
-
-        // Add Text Button
-        addTextBtn.addEventListener('click', () => {
-            const text = textInput.value;
-            if (!text || !currentImage) return;
-
-            mergeOverlay(); // Apply any pending brush strokes first
-
-            const actions = [{
-                operation: 'add_text',
-                textData: {
-                    text: text,
-                    font: fontSelect.value,
-                    size: parseInt(fontSizeInput.value, 10) || 30,
-                    color: fontColorInput.value || '#000000',
-                    x: 10, // Fixed position for example, make this interactive later
-                    y: 30
-                }
-            }];
-            sendActionsToServer(actions); // Send only the text action
-        });
-
-        // Rotate Button
-        rotateBtn.addEventListener('click', () => {
-            if (!currentImage) return;
-             mergeOverlay(); // Apply overlay first
-             const actions = [{ operation: 'rotate', angle: -90 }]; // Send rotate action (-90 for CW in PIL)
-             sendActionsToServer(actions);
-        });
-
-        // Undo Button
-        undoBtn.addEventListener('click', () => {
-            if (currentStateIndex > 0) {
-                restoreState(currentStateIndex - 1);
-            }
-        });
-
-         // General "Apply Changes" Button (Can be used for Crop, Rotate, Text if not applying immediately)
-         // This button's role is diminished if actions are sent immediately, but can be useful
-         // if you buffer multiple actions client-side before sending.
-         applyServerChangesBtn.addEventListener('click', () => {
-              alert("Apply Server Changes - Implement logic to gather pending actions and send.");
-              // Example: Gather actions based on UI state or a stored list
-              // const pendingActions = [ ... ];
-              // sendActionsToServer(pendingActions);
-         });
+             // Clear temporary drawings if switching tools (optional)
+             // clearOverlay(); // Decide if you want to clear mask/brush previews when switching
+         }
 
 
         // --- Initial Setup ---
-        updateUndoButton();
+        // (Should be at the end of your script block)
+        updateUndoButton(); // Initialize button state
         setActiveTool('select', selectToolBtn); // Start with select tool
+
 
     </script>
 </body>
