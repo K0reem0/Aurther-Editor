@@ -13,7 +13,7 @@ UPLOAD_FOLDER = 'uploads'
 EDITED_FOLDER = 'edited' # You might save final results here
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 # Ensure you have a readable font file or change the path/name
-FONT_FILE = "arial.ttf"
+FONT_FILE = "./66Hayah.otf"
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['EDITED_FOLDER'] = EDITED_FOLDER
