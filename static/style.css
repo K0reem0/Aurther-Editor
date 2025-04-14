@@ -1,0 +1,265 @@
+/* --- CSS Variables (Themes) --- */
+:root {
+    /* Light Theme (Default) */
+    --bg-color: #ffffff;
+    --text-color: #212529;
+    --secondary-text-color: #6c757d;
+    --control-bg: #f8f9fa;
+    --control-border: #dee2e6;
+    --canvas-container-border: #ced4da;
+    --button-bg: #e9ecef;
+    --button-border: #ced4da;
+    --button-hover-bg: #dee2e6;
+    --button-active-bg: #0d6efd; /* Bootstrap primary blue */
+    --button-active-border: #0a58ca;
+    --button-active-text: #ffffff;
+    --input-bg: #ffffff;
+    --input-border: #ced4da;
+    --input-focus-border: #86b7fe; /* Bootstrap focus blue */
+    --link-color: #0d6efd;
+    --loading-color: #0d6efd;
+    --tool-group-border: #dee2e6;
+}
+
+body.dark-theme {
+    --bg-color: #212529;
+    --text-color: #dee2e6;
+    --secondary-text-color: #adb5bd;
+    --control-bg: #343a40;
+    --control-border: #495057;
+    --canvas-container-border: #495057;
+    --button-bg: #495057;
+    --button-border: #6c757d;
+    --button-hover-bg: #6c757d;
+    --button-active-bg: #0d6efd; /* Keep blue for contrast */
+    --button-active-border: #0a58ca;
+    --button-active-text: #ffffff;
+    --input-bg: #495057;
+    --input-border: #6c757d;
+    --input-focus-border: #86b7fe;
+    --link-color: #6ea8fe; /* Lighter blue for dark bg */
+    --loading-color: #6ea8fe;
+    --tool-group-border: #495057;
+}
+
+/* --- Base Styles --- */
+body {
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    margin: 0;
+    padding: 1rem;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    line-height: 1.5;
+    transition: background-color 0.3s ease, color 0.3s ease; /* Smooth theme transition */
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: var(--text-color);
+}
+
+/* --- Layout (Flexbox & Responsive) --- */
+#editor-wrapper {
+    max-width: 1200px; /* Limit overall width */
+    margin: 0 auto; /* Center the wrapper */
+    padding: 1rem;
+}
+
+#editor-area {
+    display: flex;
+    flex-direction: column; /* Stack canvas and controls by default (mobile first) */
+    gap: 1.5rem; /* Space between canvas and controls */
+}
+
+#canvas-container {
+    position: relative; /* Needed for overlay canvas */
+    border: 1px solid var(--canvas-container-border);
+    background-color: var(--bg-color); /* Ensure canvas bg matches theme */
+    overflow: hidden; /* Prevent potential canvas overflow issues */
+    flex-grow: 1; /* Allow canvas container to grow */
+    max-width: 100%; /* Ensure it doesn't exceed parent */
+}
+
+#image-canvas, #overlay-canvas {
+    display: block; /* Prevent extra space below canvas */
+    max-width: 100%; /* Make canvas responsive within its container */
+    height: auto; /* Maintain aspect ratio */
+    background-color: transparent; /* Let container bg show */
+}
+
+#overlay-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none; /* Initially ignore mouse */
+}
+
+#controls {
+    background-color: var(--control-bg);
+    border: 1px solid var(--control-border);
+    border-radius: 0.375rem; /* Slightly rounded corners */
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem; /* Space between tool groups */
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+    width: 100%; /* Full width on mobile */
+    box-sizing: border-box; /* Include padding/border in width calculation */
+}
+
+/* Desktop layout adjustments */
+@media (min-width: 768px) { /* Apply styles for screens wider than 768px */
+    #editor-area {
+        flex-direction: row; /* Side-by-side layout */
+        align-items: flex-start; /* Align items to the top */
+    }
+
+    #controls {
+        width: 300px; /* Fixed width for controls on desktop */
+        flex-shrink: 0; /* Prevent controls from shrinking */
+    }
+
+     #canvas-container {
+         /* Canvas container takes remaining space */
+         width: calc(100% - 300px - 1.5rem); /* Adjust width considering controls width and gap */
+     }
+}
+
+/* --- Control Panel Styling --- */
+.tool-group {
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--tool-group-border);
+    display: flex;
+    flex-direction: column; /* Stack items within a group vertically */
+    gap: 0.5rem; /* Space between items in a group */
+}
+.tool-group:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.tool-group strong {
+    margin-bottom: 0.25rem;
+    color: var(--text-color);
+}
+.tool-group label {
+     color: var(--secondary-text-color);
+}
+
+/* Style button groups (like tools) */
+.button-group {
+    display: flex;
+    flex-wrap: wrap; /* Allow buttons to wrap */
+    gap: 0.5rem;
+}
+
+/* Input and Button Styling */
+button, input[type="text"], input[type="number"], input[type="color"], input[type="file"], select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--button-border);
+    border-radius: 0.25rem;
+    background-color: var(--button-bg);
+    color: var(--text-color);
+    font-size: 0.9rem;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    box-sizing: border-box;
+}
+input[type="text"], input[type="number"], input[type="file"], select {
+     background-color: var(--input-bg);
+     border-color: var(--input-border);
+     width: 100%; /* Make inputs take full width of their container */
+}
+input[type="color"] {
+    min-height: 2.25rem; /* Ensure color input has some height */
+    padding: 0.2rem; /* Adjust padding for color input */
+    width: 50px; /* Fixed width for color picker */
+    vertical-align: middle;
+}
+input[type="range"] {
+    vertical-align: middle;
+}
+
+button {
+    cursor: pointer;
+    text-align: center;
+}
+button:hover:not(:disabled) {
+    background-color: var(--button-hover-bg);
+    border-color: var(--button-border);
+}
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+button.active {
+    background-color: var(--button-active-bg);
+    border-color: var(--button-active-border);
+    color: var(--button-active-text);
+}
+
+/* Specific input group styling */
+.input-group {
+    display: flex;
+    align-items: center; /* Align label and input */
+    gap: 0.5rem;
+}
+.input-group label {
+     flex-shrink: 0; /* Prevent label from shrinking */
+     min-width: 50px; /* Give label some space */
+}
+.input-group input[type="number"], .input-group input[type="text"], .input-group select {
+     flex-grow: 1; /* Allow input to take remaining space */
+}
+.input-group input[type="color"] {
+    flex-grow: 0; /* Don't let color picker grow */
+}
+
+
+/* Focus outline for accessibility */
+button:focus, input:focus, select:focus {
+    outline: 2px solid var(--input-focus-border);
+    outline-offset: 1px;
+    border-color: var(--input-focus-border); /* Optional: change border too */
+}
+/* Remove default outline for color input and use box-shadow for focus */
+input[type="color"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--bg-color), 0 0 0 4px var(--input-focus-border);
+}
+
+
+/* --- Utility Styles --- */
+#loading-indicator {
+    display: none; /* Hidden by default */
+    margin-top: 10px;
+    color: var(--loading-color);
+    font-weight: bold;
+    text-align: center;
+    width: 100%;
+}
+
+/* Theme switcher styles */
+#theme-switcher {
+    margin-bottom: 1rem;
+    text-align: center;
+}
+#theme-switcher button {
+    margin: 0 0.25rem;
+}
+
+/* Ensure sliders have consistent look */
+input[type="range"] {
+     width: calc(100% - 50px); /* Adjust width relative to value span */
+     cursor: pointer;
+}
+.range-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.range-group span {
+     min-width: 30px; /* Space for the value */
+     text-align: right;
+     font-size: 0.85rem;
+     color: var(--secondary-text-color);
+}
